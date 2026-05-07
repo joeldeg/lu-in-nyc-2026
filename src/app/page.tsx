@@ -33,7 +33,7 @@ type Discovery = {
   created_at: string
   members: {
     name: string
-  } | null
+  }[] | null
 }
 
 export default function HomePage() {
@@ -255,7 +255,7 @@ export default function HomePage() {
                     </p>
 
                     <p className="text-sm text-zinc-400 mt-1">
-                      {discovery.members?.name ?? 'Someone'} · {discovery.points} pts
+                      {discovery.members?.[0]?.name ?? 'Someone'} · {discovery.points} pts
                     </p>
                   </div>
                 </div>

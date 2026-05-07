@@ -11,7 +11,7 @@ type Discovery = {
   longitude: number | null
   members: {
     name: string
-  } | null
+  }[] | null
 }
 
 const markerIcon = new L.Icon({
@@ -62,7 +62,7 @@ export default function DiscoveryMap({
                 </p>
 
                 <p className="text-sm text-zinc-500">
-                  {discovery.members?.name ?? 'Someone'}
+                  {discovery.members?.[0]?.name ?? 'Someone'}
                 </p>
               </div>
             </Popup>
