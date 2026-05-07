@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import dynamic from 'next/dynamic'
+
+const DiscoveryMap = dynamic(
+  () => import('@/components/DiscoveryMap'),
+  { ssr: false }
+)
 
 const TRIP_ID = '11111111-1111-1111-1111-111111111111'
 
@@ -21,6 +27,8 @@ type Discovery = {
   id: string
   photo_url: string
   caption: string | null
+  latitude: number | null
+  longitude: number | null
   points: number
   created_at: string
   members: {
@@ -49,7 +57,7 @@ export default function HomePage() {
       supabase.from('members').select('*').order('created_at'),
       supabase
         .from('discoveries')
-        .select('id, photo_url, caption, points, created_at, members(name)')
+        .select('id, photo_url, caption, latitude, longitude, points, created_at, members(name)')
         .order('created_at', { ascending: false })
     ])
 
@@ -210,6 +218,14 @@ export default function HomePage() {
             {saving ? 'Saving...' : 'Save Moment'}
           </button>
         </form>
+
+<section className="mb-8">
+  <h2 className="text-2xl font-semibold mb-4">
+    Adventure Map
+  </h2>
+
+  <DiscoveryMap discoveries={discoveries} />
+</section>
 
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">
