@@ -1,8 +1,5 @@
 'use client'
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import L from 'leaflet'
-
 type Discovery = {
   id: string
   photo_url: string
@@ -19,13 +16,6 @@ type Discovery = {
     }[]
   | null
 }
-
-const markerIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-})
 
 function formatTimestamp(value: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -60,47 +50,51 @@ export default function DiscoveryMap({
     (d) => Number.isFinite(d.latitude) && Number.isFinite(d.longitude)
   )
 
-  return (
-    <div className="h-[500px] w-full rounded-3xl overflow-hidden border border-zinc-800">
-      <MapContainer
-        center={[40.7411, -73.9897]}
-        zoom={13}
-        scrollWheelZoom={true}
-        className="h-full w-full"
-      >
-        <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {mappedDiscoveries.map((discovery) => (
-          <Marker
-            key={discovery.id}
-            position={[discovery.latitude!, discovery.longitude!]}
-            icon={markerIcon}
-          >
-            <Popup>
-              <div className="w-48">
-                <img
-                  src={discovery.photo_url}
-                  alt={discovery.caption ?? 'NYC moment'}
-                  className="w-full rounded-lg mb-2"
-                />
+  if (mappedDiscoveries.length === 0) {
+    return (
+      <div className="min-h-56 w-full rounded-3xl border border-zinc-800 bg-zinc-900 p-5 flex items-center justify-center text-center">
+        <p className="text-sm text-zinc-400">
+          Saved moments with location will appear here.
+        </p>
+      </div>
+    )
+  }
 
+  return (
+    <div className="w-full rounded-3xl overflow-hidden border border-zinc-800 bg-zinc-900">
+      <div className="max-h-[500px] overflow-y-auto divide-y divide-zinc-800">
+        {mappedDiscoveries.map((discovery) => {
+          const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${discovery.latitude},${discovery.longitude}`
+
+          return (
+            <a
+              key={discovery.id}
+              href={mapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex gap-3 p-3 hover:bg-zinc-800"
+            >
+              <img
+                src={discovery.photo_url}
+                alt={discovery.caption ?? 'NYC moment'}
+                className="h-20 w-20 shrink-0 rounded-2xl object-cover"
+              />
+
+              <div className="min-w-0">
                 <p className="font-semibold">
                   {discovery.caption || 'NYC Moment'}
                 </p>
-
-                <p className="text-sm text-zinc-500">
-                  {getMemberName(discovery.members)}
+                <p className="text-sm text-zinc-400">
+                  {getMemberName(discovery.members)} · {formatTimestamp(discovery.created_at)}
                 </p>
-                <p className="text-xs text-zinc-400">
-  {formatTimestamp(discovery.created_at)}
-</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {discovery.latitude?.toFixed(5)}, {discovery.longitude?.toFixed(5)}
+                </p>
               </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+            </a>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -87,6 +87,9 @@ export default function HomePage() {
   const [photo, setPhoto] = useState<File | null>(null)
   const [manualLatitude, setManualLatitude] = useState<number | null>(null)
   const [manualLongitude, setManualLongitude] = useState<number | null>(null)
+  const [currentLatitude, setCurrentLatitude] = useState<number | null>(null)
+  const [currentLongitude, setCurrentLongitude] = useState<number | null>(null)
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'checking' | 'ready' | 'unavailable'>('idle')
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [caption, setCaption] = useState('')
   const [memberName, setMemberName] = useState('')
@@ -138,6 +141,24 @@ export default function HomePage() {
     return memberData.name ?? 'Someone'
   }
 
+  async function captureCurrentLocation() {
+    setLocationStatus('checking')
+
+    const coordinates = await getCurrentCoordinates()
+
+    if (coordinates) {
+      setCurrentLatitude(coordinates.latitude)
+      setCurrentLongitude(coordinates.longitude)
+      setLocationStatus('ready')
+      return coordinates
+    }
+
+    setCurrentLatitude(null)
+    setCurrentLongitude(null)
+    setLocationStatus('unavailable')
+    return null
+  }
+
 async function handlePhotoChange(file: File | null) {
   setPhoto(file)
   setManualLatitude(null)
@@ -167,6 +188,11 @@ async function handlePhotoChange(file: File | null) {
     setEditingDiscovery(discovery)
     setEditCaption(discovery.caption ?? '')
     setEditPoints(discovery.points)
+  }
+
+  function openCaptureForm() {
+    setShowCaptureForm(true)
+    void captureCurrentLocation()
   }
 
   // ---- Handlers ----
@@ -235,6 +261,7 @@ async function handlePhotoChange(file: File | null) {
     const selectedPlace = places.find((place) => place.id === selectedPlaceId)
     const pointsToAward = selectedPlace ? selectedPlace.points : 5
     const photoCoordinates = toCoordinates(manualLatitude, manualLongitude)
+    const currentCoordinates = toCoordinates(currentLatitude, currentLongitude)
     const selectedPlaceCoordinates = toCoordinates(
       selectedPlace?.latitude,
       selectedPlace?.longitude
@@ -245,13 +272,18 @@ async function handlePhotoChange(file: File | null) {
       longitude = photoCoordinates.longitude
     }
 
-    if (!hasCoordinates(latitude, longitude)) {
-      const currentCoordinates = await getCurrentCoordinates()
+    if (!hasCoordinates(latitude, longitude) && currentCoordinates) {
+      latitude = currentCoordinates.latitude
+      longitude = currentCoordinates.longitude
+    }
 
-      if (currentCoordinates) {
-        latitude = currentCoordinates.latitude
-        longitude = currentCoordinates.longitude
-      }
+    const liveCoordinates = !hasCoordinates(latitude, longitude)
+      ? await captureCurrentLocation()
+      : null
+
+    if (liveCoordinates) {
+      latitude = liveCoordinates.latitude
+      longitude = liveCoordinates.longitude
     }
 
     if (
@@ -264,6 +296,9 @@ async function handlePhotoChange(file: File | null) {
 
     if (!hasCoordinates(latitude, longitude)) {
       console.warn('Saving moment without coordinates. No photo GPS, browser location, or selected place coordinates were available.')
+      alert('Location was not available. Please allow location access or choose a planned place before saving.')
+      setSaving(false)
+      return
     }
 
     const { error: insertError } = await supabase.from('discoveries').insert({
@@ -287,6 +322,9 @@ async function handlePhotoChange(file: File | null) {
     setPhoto(null)
     setManualLatitude(null)
     setManualLongitude(null)
+    setCurrentLatitude(null)
+    setCurrentLongitude(null)
+    setLocationStatus('idle')
     setPhotoPreview(null)
     setCaption('')
     setSelectedPlaceId('')
@@ -346,6 +384,16 @@ async function handlePhotoChange(file: File | null) {
   // ---- Modals ----
 
   function renderCaptureModal() {
+    const selectedPlace = places.find((place) => place.id === selectedPlaceId)
+    const photoCoordinates = toCoordinates(manualLatitude, manualLongitude)
+    const currentCoordinates = toCoordinates(currentLatitude, currentLongitude)
+    const selectedPlaceCoordinates = toCoordinates(
+      selectedPlace?.latitude,
+      selectedPlace?.longitude
+    )
+    const availableCoordinates =
+      photoCoordinates ?? currentCoordinates ?? selectedPlaceCoordinates
+
     return (
       <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-end justify-center">
         <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
@@ -385,6 +433,31 @@ async function handlePhotoChange(file: File | null) {
                 </option>
               ))}
             </select>
+
+            <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">
+                    {availableCoordinates ? 'Location ready' : 'Location needed'}
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    {photoCoordinates && 'Using photo GPS'}
+                    {!photoCoordinates && currentCoordinates && 'Using phone location'}
+                    {!photoCoordinates && !currentCoordinates && selectedPlaceCoordinates && 'Using selected place'}
+                    {!availableCoordinates && locationStatus === 'checking' && 'Checking phone location...'}
+                    {!availableCoordinates && locationStatus !== 'checking' && 'Allow location or choose a planned place'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={captureCurrentLocation}
+                  disabled={locationStatus === 'checking'}
+                  className="shrink-0 rounded-xl border border-zinc-700 px-3 py-2 text-sm font-semibold text-yellow-400 disabled:opacity-50"
+                >
+                  {locationStatus === 'checking' ? 'Checking' : 'Use GPS'}
+                </button>
+              </div>
+            </div>
 
             <label className="block text-sm text-zinc-400 mb-2">Photo</label>
             <input
@@ -517,7 +590,7 @@ async function handlePhotoChange(file: File | null) {
 
           <button
             type="button"
-            onClick={() => setShowCaptureForm(true)}
+            onClick={openCaptureForm}
             className="relative -mt-10 mx-auto bg-yellow-400 text-black w-20 h-20 rounded-full border-4 border-zinc-950 shadow-2xl flex items-center justify-center text-3xl"
           >
             📸
