@@ -2,7 +2,6 @@
 
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
-import MarkerClusterGroup from 'react-leaflet-cluster'
 
 type Discovery = {
   id: string
@@ -58,7 +57,7 @@ export default function DiscoveryMap({
   discoveries: Discovery[]
 }) {
   const mappedDiscoveries = discoveries.filter(
-    (d) => d.latitude && d.longitude
+    (d) => Number.isFinite(d.latitude) && Number.isFinite(d.longitude)
   )
 
   return (
@@ -73,7 +72,6 @@ export default function DiscoveryMap({
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-     <MarkerClusterGroup chunkedLoading>
         {mappedDiscoveries.map((discovery) => (
           <Marker
             key={discovery.id}
@@ -102,7 +100,6 @@ export default function DiscoveryMap({
             </Popup>
           </Marker>
         ))}
-    </MarkerClusterGroup>
       </MapContainer>
     </div>
   )

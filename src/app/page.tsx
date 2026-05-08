@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import dynamic from 'next/dynamic'
 import exifr from 'exifr'
@@ -11,6 +11,11 @@ const DiscoveryMap = dynamic(
 )
 
 const TRIP_ID = '11111111-1111-1111-1111-111111111111'
+
+type Coordinates = {
+  latitude: number
+  longitude: number
+}
 
 type Place = {
   id: string
@@ -31,6 +36,47 @@ type Discovery = {
   place_id: string | null
   created_at: string
   members: { name: string } | { name: string }[] | null
+}
+
+function hasCoordinates(
+  latitude: number | null | undefined,
+  longitude: number | null | undefined
+): boolean {
+  return Number.isFinite(latitude) && Number.isFinite(longitude)
+}
+
+function toCoordinates(
+  latitude: number | null | undefined,
+  longitude: number | null | undefined
+): Coordinates | null {
+  if (!hasCoordinates(latitude, longitude)) return null
+
+  return {
+    latitude: latitude as number,
+    longitude: longitude as number
+  }
+}
+
+async function getCurrentCoordinates(): Promise<Coordinates | null> {
+  if (!('geolocation' in navigator)) return null
+
+  try {
+    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 30000
+      })
+    })
+
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude
+    }
+  } catch {
+    console.log('Location permission skipped or unavailable.')
+    return null
+  }
 }
 
 export default function HomePage() {
@@ -94,6 +140,8 @@ export default function HomePage() {
 
 async function handlePhotoChange(file: File | null) {
   setPhoto(file)
+  setManualLatitude(null)
+  setManualLongitude(null)
 
   if (!file) {
     setPhotoPreview(null)
@@ -104,10 +152,11 @@ async function handlePhotoChange(file: File | null) {
 
   try {
     const gps = await exifr.gps(file)
+    const gpsCoordinates = toCoordinates(gps?.latitude, gps?.longitude)
 
-    if (gps?.latitude && gps?.longitude) {
-      setManualLatitude(gps.latitude)
-      setManualLongitude(gps.longitude)
+    if (gpsCoordinates) {
+      setManualLatitude(gpsCoordinates.latitude)
+      setManualLongitude(gpsCoordinates.longitude)
     }
   } catch {
     console.log('No GPS data found in photo EXIF.')
@@ -134,21 +183,6 @@ async function handlePhotoChange(file: File | null) {
 
     let latitude: number | null = null
     let longitude: number | null = null
-
-    try {
-      if ('geolocation' in navigator) {
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 8000
-          })
-        })
-        latitude = position.coords.latitude
-        longitude = position.coords.longitude
-      }
-    } catch {
-      console.log('Location permission skipped or unavailable. Using selected place if available.')
-    }
 
     const fileExt = photo.name.split('.').pop()
     const fileName = `${TRIP_ID}/${Date.now()}.${fileExt}`
@@ -200,15 +234,36 @@ async function handlePhotoChange(file: File | null) {
 
     const selectedPlace = places.find((place) => place.id === selectedPlaceId)
     const pointsToAward = selectedPlace ? selectedPlace.points : 5
+    const photoCoordinates = toCoordinates(manualLatitude, manualLongitude)
+    const selectedPlaceCoordinates = toCoordinates(
+      selectedPlace?.latitude,
+      selectedPlace?.longitude
+    )
 
-    if (manualLatitude && manualLongitude) {
-      latitude = manualLatitude
-      longitude = manualLongitude
+    if (photoCoordinates) {
+      latitude = photoCoordinates.latitude
+      longitude = photoCoordinates.longitude
     }
 
-    if ((!latitude || !longitude) && selectedPlace?.latitude && selectedPlace?.longitude) {
-      latitude = selectedPlace.latitude
-      longitude = selectedPlace.longitude
+    if (!hasCoordinates(latitude, longitude)) {
+      const currentCoordinates = await getCurrentCoordinates()
+
+      if (currentCoordinates) {
+        latitude = currentCoordinates.latitude
+        longitude = currentCoordinates.longitude
+      }
+    }
+
+    if (
+      !hasCoordinates(latitude, longitude) &&
+      selectedPlaceCoordinates
+    ) {
+      latitude = selectedPlaceCoordinates.latitude
+      longitude = selectedPlaceCoordinates.longitude
+    }
+
+    if (!hasCoordinates(latitude, longitude)) {
+      console.warn('Saving moment without coordinates. No photo GPS, browser location, or selected place coordinates were available.')
     }
 
     const { error: insertError } = await supabase.from('discoveries').insert({
@@ -290,8 +345,7 @@ async function handlePhotoChange(file: File | null) {
 
   // ---- Modals ----
 
-  const CaptureModal = useMemo(() => {
-    return function CaptureModalComponent() {
+  function renderCaptureModal() {
     return (
       <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-end justify-center">
         <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
@@ -353,6 +407,8 @@ async function handlePhotoChange(file: File | null) {
                   onClick={() => {
                     setPhoto(null)
                     setPhotoPreview(null)
+                    setManualLatitude(null)
+                    setManualLongitude(null)
                   }}
                   className="mt-2 text-sm text-zinc-400 underline"
                 >
@@ -380,19 +436,9 @@ async function handlePhotoChange(file: File | null) {
         </div>
       </div>
     )
-    }
-  }, [
-    memberName,
-    selectedPlaceId,
-    places,
-    photoPreview,
-    caption,
-    saving,
-    manualLatitude,
-    manualLongitude
-  ])
+  }
 
-  function EditModal() {
+  function renderEditModal() {
     return (
       <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-end justify-center">
         <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6">
@@ -447,7 +493,7 @@ async function handlePhotoChange(file: File | null) {
 
   // ---- Nav ----
 
-  function BottomNav() {
+  function renderBottomNav() {
     return (
       <nav className="fixed bottom-0 left-0 right-0 z-[9997] bg-zinc-950/95 backdrop-blur border-t border-zinc-800">
         <div className="max-w-md mx-auto grid grid-cols-5 items-center px-4 py-3">
@@ -696,9 +742,9 @@ async function handlePhotoChange(file: File | null) {
 
       </div>
 
-      {showCaptureForm && <CaptureModal />}
-      {editingDiscovery && <EditModal />}
-      <BottomNav />
+      {showCaptureForm && renderCaptureModal()}
+      {editingDiscovery && renderEditModal()}
+      {renderBottomNav()}
     </main>
   )
 }
