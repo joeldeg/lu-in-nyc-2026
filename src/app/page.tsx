@@ -30,6 +30,7 @@ type Discovery = {
   latitude: number | null
   longitude: number | null
   points: number
+  place_id: string | null
   created_at: string
   members: {
     name: string
@@ -48,10 +49,75 @@ export default function HomePage() {
   const [memberName, setMemberName] = useState('')
   const [saving, setSaving] = useState(false)
   const [showCaptureForm, setShowCaptureForm] = useState(false)
+  const [editingDiscovery, setEditingDiscovery] = useState<Discovery | null>(null)
+  const [editCaption, setEditCaption] = useState('')
+  const [editPoints, setEditPoints] = useState(0)
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     fetchData()
   }, [])
+
+function openEditDiscovery(discovery: Discovery) {
+  setEditingDiscovery(discovery)
+  setEditCaption(discovery.caption ?? '')
+  setEditPoints(discovery.points)
+}
+
+async function handleUpdateDiscovery(event: React.FormEvent) {
+  event.preventDefault()
+
+  if (!editingDiscovery) return
+
+  setUpdating(true)
+
+  const { error } = await supabase
+    .from('discoveries')
+    .update({
+      caption: editCaption,
+      points: editPoints
+    })
+    .eq('id', editingDiscovery.id)
+
+  if (error) {
+    alert('Could not update memory.')
+    console.error(error)
+    setUpdating(false)
+    return
+  }
+
+  setEditingDiscovery(null)
+  await fetchData()
+  setUpdating(false)
+}
+
+async function handleDeleteDiscovery() {
+  if (!editingDiscovery) return
+
+  const confirmed = window.confirm(
+    'Delete this memory? This cannot be undone.'
+  )
+
+  if (!confirmed) return
+
+  setUpdating(true)
+
+  const { error } = await supabase
+    .from('discoveries')
+    .delete()
+    .eq('id', editingDiscovery.id)
+
+  if (error) {
+    alert('Could not delete memory.')
+    console.error(error)
+    setUpdating(false)
+    return
+  }
+
+  setEditingDiscovery(null)
+  await fetchData()
+  setUpdating(false)
+}
 
   async function fetchData() {
     const [placesResponse, membersResponse, discoveriesResponse] = await Promise.all([
@@ -59,7 +125,7 @@ export default function HomePage() {
       supabase.from('members').select('*').order('created_at'),
       supabase
         .from('discoveries')
-        .select('id, photo_url, caption, latitude, longitude, points, created_at, members(name)')
+        .select('id, place_id, photo_url, caption, latitude, longitude, points, created_at, members(name)')
         .order('created_at', { ascending: false })
     ])
 
@@ -201,6 +267,13 @@ const pointsToAward = selectedPlace
       }
 
   const totalPoints = discoveries.reduce((sum, item) => sum + item.points, 0)
+  const visitedPlaceIds = new Set(
+  discoveries
+    .map((discovery) => discovery.place_id)
+    .filter(Boolean)
+)
+
+const visitedPlacesCount = visitedPlaceIds.size
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-6">
@@ -215,9 +288,27 @@ const pointsToAward = selectedPlace
             Lu in NYC 2026
           </h1>
 
-          <p className="text-zinc-400 mt-2">
-            {discoveries.length} moments · {totalPoints} points
-          </p>
+          <div className="grid grid-cols-4 gap-2 mt-5">
+  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+    <p className="text-2xl font-bold">{discoveries.length}</p>
+    <p className="text-xs text-zinc-400">Moments</p>
+  </div>
+
+  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+    <p className="text-2xl font-bold">{totalPoints}</p>
+    <p className="text-xs text-zinc-400">Points</p>
+  </div>
+
+  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+    <p className="text-2xl font-bold">{visitedPlacesCount}</p>
+    <p className="text-xs text-zinc-400">Places</p>
+  </div>
+
+  <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
+    <p className="text-2xl font-bold">{places.length}</p>
+    <p className="text-xs text-zinc-400">Stops</p>
+  </div>
+</div>
         </div>
 
         {showCaptureForm && (
@@ -363,6 +454,13 @@ const pointsToAward = selectedPlace
                     <p className="text-sm text-zinc-400 mt-1">
                       {discovery.members?.[0]?.name ?? 'Someone'} · {discovery.points} pts
                     </p>
+                    <button
+  type="button"
+  onClick={() => openEditDiscovery(discovery)}
+  className="mt-3 text-sm text-yellow-400 font-semibold"
+>
+  Edit
+</button>
                   </div>
                 </div>
               ))}
@@ -406,6 +504,67 @@ const pointsToAward = selectedPlace
         </section>
 
       </div>
+
+{editingDiscovery && (
+  <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-end justify-center">
+    <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-2xl font-bold">
+          Edit Memory
+        </h2>
+
+        <button
+          type="button"
+          onClick={() => setEditingDiscovery(null)}
+          className="text-zinc-400 text-2xl"
+        >
+          ×
+        </button>
+      </div>
+
+      <form onSubmit={handleUpdateDiscovery}>
+        <label className="block text-sm text-zinc-400 mb-2">
+          Caption
+        </label>
+
+        <input
+          value={editCaption}
+          onChange={(e) => setEditCaption(e.target.value)}
+          className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+        />
+
+        <label className="block text-sm text-zinc-400 mb-2">
+          Points
+        </label>
+
+        <input
+          type="number"
+          value={editPoints}
+          onChange={(e) => setEditPoints(Number(e.target.value))}
+          className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+        />
+
+        <button
+          type="submit"
+          disabled={updating}
+          className="w-full bg-yellow-400 text-black font-bold py-4 rounded-2xl text-lg disabled:opacity-50"
+        >
+          {updating ? 'Saving...' : 'Save Changes'}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDeleteDiscovery}
+          disabled={updating}
+          className="w-full mt-3 bg-red-950 text-red-300 border border-red-900 font-bold py-4 rounded-2xl text-lg disabled:opacity-50"
+        >
+          Delete Memory
+        </button>
+      </form>
+    </div>
+  </div>
+)}
+
       <button
   type="button"
   onClick={() => setShowCaptureForm(true)}
