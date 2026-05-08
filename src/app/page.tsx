@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import dynamic from 'next/dynamic'
 import exifr from 'exifr'
@@ -290,7 +290,8 @@ async function handlePhotoChange(file: File | null) {
 
   // ---- Modals ----
 
-  function CaptureModal() {
+  const CaptureModal = useMemo(() => {
+    return function CaptureModalComponent() {
     return (
       <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-end justify-center">
         <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
@@ -379,7 +380,17 @@ async function handlePhotoChange(file: File | null) {
         </div>
       </div>
     )
-  }
+    }
+  }, [
+    memberName,
+    selectedPlaceId,
+    places,
+    photoPreview,
+    caption,
+    saving,
+    manualLatitude,
+    manualLongitude
+  ])
 
   function EditModal() {
     return (
