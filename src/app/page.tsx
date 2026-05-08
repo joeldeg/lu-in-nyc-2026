@@ -41,7 +41,7 @@ export default function HomePage() {
   const [members, setMembers] = useState<Member[]>([])
   const [discoveries, setDiscoveries] = useState<Discovery[]>([])
   const [loading, setLoading] = useState(true)
-
+  const [selectedPlaceId, setSelectedPlaceId] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [caption, setCaption] = useState('')
@@ -164,6 +164,13 @@ if (existingMember) {
 
   memberId = newMember.id
 }
+    const selectedPlace = places.find(
+  (place) => place.id === selectedPlaceId
+)
+
+const pointsToAward = selectedPlace
+  ? selectedPlace.points
+  : 5
 
     const { error: insertError } = await supabase
       .from('discoveries')
@@ -174,7 +181,7 @@ if (existingMember) {
         caption,
         latitude,
         longitude,
-        points: 5
+        points: pointsToAward
       })
 
     if (insertError) {
@@ -187,6 +194,7 @@ if (existingMember) {
     setPhoto(null)
     setPhotoPreview(null)
     setCaption('')
+    setSelectedPlaceId('')
     setShowCaptureForm(false)
     await fetchData()
     setSaving(false)
@@ -243,6 +251,23 @@ if (existingMember) {
   placeholder="Enter your name"
   className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
 />
+<label className="block text-sm text-zinc-400 mb-2">
+  Where are we?
+</label>
+
+<select
+  value={selectedPlaceId}
+  onChange={(e) => setSelectedPlaceId(e.target.value)}
+  className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+>
+  <option value="">Just a moment</option>
+
+  {places.map((place) => (
+    <option key={place.id} value={place.id}>
+      {place.name} · {place.points} pts
+    </option>
+  ))}
+</select>
 
         <label className="block text-sm text-zinc-400 mb-2">
           Photo
