@@ -32,9 +32,14 @@ type Discovery = {
   points: number
   place_id: string | null
   created_at: string
-  members: {
-    name: string
-  }[] | null
+  members:
+  | {
+      name: string
+    }
+  | {
+      name: string
+    }[]
+  | null
 }
 
 export default function HomePage() {
@@ -62,6 +67,25 @@ function openEditDiscovery(discovery: Discovery) {
   setEditingDiscovery(discovery)
   setEditCaption(discovery.caption ?? '')
   setEditPoints(discovery.points)
+}
+
+function formatTimestamp(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(new Date(value))
+}
+
+function getMemberName(memberData: Discovery['members']) {
+  if (!memberData) return 'Someone'
+
+  if (Array.isArray(memberData)) {
+    return memberData[0]?.name ?? 'Someone'
+  }
+
+  return memberData.name ?? 'Someone'
 }
 
 async function handleUpdateDiscovery(event: React.FormEvent) {
@@ -204,11 +228,16 @@ if (savedMemberName) {
 
 let memberId: string | null = null
 
-const { data: existingMember } = await supabase
+const normalizedMemberName = memberName.trim()
+
+const { data: existingMembers } = await supabase
   .from('members')
   .select('*')
-  .ilike('name', memberName.trim())
-  .single()
+  .eq('trip_id', TRIP_ID)
+  .ilike('name', normalizedMemberName)
+  .limit(1)
+
+const existingMember = existingMembers?.[0]
 
 if (existingMember) {
   memberId = existingMember.id
@@ -217,7 +246,7 @@ if (existingMember) {
     .from('members')
     .insert({
       trip_id: TRIP_ID,
-      name: memberName.trim()
+      name: normalizedMemberName
     })
     .select()
     .single()
@@ -452,7 +481,7 @@ const visitedPlacesCount = visitedPlaceIds.size
                     </p>
 
                     <p className="text-sm text-zinc-400 mt-1">
-                      {discovery.members?.[0]?.name ?? 'Someone'} · {discovery.points} pts
+                      {getMemberName(discovery.members)} · {discovery.points} pts · {formatTimestamp(discovery.created_at)}
                     </p>
                     <button
   type="button"

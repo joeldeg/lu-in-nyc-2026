@@ -2,10 +2,12 @@
 
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
+import MarkerClusterGroup from 'react-leaflet-cluster'
 
 type Discovery = {
   id: string
   photo_url: string
+  created_at: string
   caption: string | null
   latitude: number | null
   longitude: number | null
@@ -20,6 +22,30 @@ const markerIcon = new L.Icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41]
 })
+
+function formatTimestamp(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(new Date(value))
+}
+
+function getMemberName(
+  memberData:
+    | { name: string }
+    | { name: string }[]
+    | null
+) {
+  if (!memberData) return 'Someone'
+
+  if (Array.isArray(memberData)) {
+    return memberData[0]?.name ?? 'Someone'
+  }
+
+  return memberData.name ?? 'Someone'
+}
 
 export default function DiscoveryMap({
   discoveries
@@ -42,7 +68,7 @@ export default function DiscoveryMap({
           attribution='&copy; OpenStreetMap contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-
+     <MarkerClusterGroup chunkedLoading>
         {mappedDiscoveries.map((discovery) => (
           <Marker
             key={discovery.id}
@@ -62,12 +88,16 @@ export default function DiscoveryMap({
                 </p>
 
                 <p className="text-sm text-zinc-500">
-                  {discovery.members?.[0]?.name ?? 'Someone'}
+                  {getMemberName(discovery.members)}
                 </p>
+                <p className="text-xs text-zinc-400">
+  {formatTimestamp(discovery.created_at)}
+</p>
               </div>
             </Popup>
           </Marker>
         ))}
+    </MarkerClusterGroup>
       </MapContainer>
     </div>
   )
