@@ -11,9 +11,14 @@ type Discovery = {
   caption: string | null
   latitude: number | null
   longitude: number | null
-  members: {
-    name: string
-  }[] | null
+  members:
+  | {
+      name: string
+    }
+  | {
+      name: string
+    }[]
+  | null
 }
 
 const markerIcon = new L.Icon({
