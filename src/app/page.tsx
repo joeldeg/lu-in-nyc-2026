@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import dynamic from 'next/dynamic'
+import exifr from 'exifr'
 
 const DiscoveryMap = dynamic(
   () => import('@/components/DiscoveryMap'),
@@ -38,6 +39,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [selectedPlaceId, setSelectedPlaceId] = useState('')
   const [photo, setPhoto] = useState<File | null>(null)
+  const [manualLatitude, setManualLatitude] = useState<number | null>(null)
+  const [manualLongitude, setManualLongitude] = useState<number | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [caption, setCaption] = useState('')
   const [memberName, setMemberName] = useState('')
@@ -89,14 +92,27 @@ export default function HomePage() {
     return memberData.name ?? 'Someone'
   }
 
-  function handlePhotoChange(file: File | null) {
-    setPhoto(file)
-    if (!file) {
-      setPhotoPreview(null)
-      return
-    }
-    setPhotoPreview(URL.createObjectURL(file))
+async function handlePhotoChange(file: File | null) {
+  setPhoto(file)
+
+  if (!file) {
+    setPhotoPreview(null)
+    return
   }
+
+  setPhotoPreview(URL.createObjectURL(file))
+
+  try {
+    const gps = await exifr.gps(file)
+
+    if (gps?.latitude && gps?.longitude) {
+      setManualLatitude(gps.latitude)
+      setManualLongitude(gps.longitude)
+    }
+  } catch {
+    console.log('No GPS data found in photo EXIF.')
+  }
+}
 
   function openEditDiscovery(discovery: Discovery) {
     setEditingDiscovery(discovery)
@@ -185,10 +201,15 @@ export default function HomePage() {
     const selectedPlace = places.find((place) => place.id === selectedPlaceId)
     const pointsToAward = selectedPlace ? selectedPlace.points : 5
 
+    if (manualLatitude && manualLongitude) {
+      latitude = manualLatitude
+      longitude = manualLongitude
+    }
+
     if ((!latitude || !longitude) && selectedPlace?.latitude && selectedPlace?.longitude) {
       latitude = selectedPlace.latitude
       longitude = selectedPlace.longitude
-}
+    }
 
     const { error: insertError } = await supabase.from('discoveries').insert({
       trip_id: TRIP_ID,
@@ -209,6 +230,8 @@ export default function HomePage() {
     }
 
     setPhoto(null)
+    setManualLatitude(null)
+    setManualLongitude(null)
     setPhotoPreview(null)
     setCaption('')
     setSelectedPlaceId('')
