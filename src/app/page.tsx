@@ -11,6 +11,8 @@ const DiscoveryMap = dynamic(
 )
 
 const TRIP_ID = '11111111-1111-1111-1111-111111111111'
+const TEAM_MOMENT_GOAL = 60
+const TEAM_SIZE = 4
 
 type Coordinates = {
   latitude: number
@@ -36,6 +38,68 @@ type Discovery = {
   place_id: string | null
   created_at: string
   members: { name: string } | { name: string }[] | null
+}
+
+type IconName = 'home' | 'quests' | 'camera' | 'map' | 'journal' | 'group'
+
+function FlatIcon({
+  name,
+  className = 'h-7 w-7'
+}: {
+  name: IconName
+  className?: string
+}) {
+  if (name === 'home') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+        <path d="M3 10.8 12 3l9 7.8v9.7a.5.5 0 0 1-.5.5h-5.6v-6.2H9.1V21H3.5a.5.5 0 0 1-.5-.5v-9.7Z" />
+      </svg>
+    )
+  }
+
+  if (name === 'quests') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
+        <rect x="5" y="3" width="14" height="18" rx="2.5" fill="currentColor" />
+        <path d="M9 8h6M9 12h6M9 16h4" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  if (name === 'camera') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+        <path d="M8.3 5h7.4l1.2 2H20a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3.1l1.2-2Z" />
+        <circle cx="12" cy="13" r="4.1" fill="white" />
+        <circle cx="12" cy="13" r="2.4" fill="currentColor" />
+      </svg>
+    )
+  }
+
+  if (name === 'map') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+        <path d="M12 2.8a6.2 6.2 0 0 0-6.2 6.2c0 4.5 6.2 12.2 6.2 12.2S18.2 13.5 18.2 9A6.2 6.2 0 0 0 12 2.8Zm0 8.7A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z" />
+      </svg>
+    )
+  }
+
+  if (name === 'journal') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+        <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17.5H7A3 3 0 0 0 4 22V4.5Z" />
+        <path d="M8 6h8M8 10h8M8 14h5" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <circle cx="8" cy="8" r="3.2" />
+      <circle cx="16" cy="8" r="3.2" />
+      <path d="M2.8 20a5.4 5.4 0 0 1 10.4-2 5.4 5.4 0 0 1 8 2H2.8Z" />
+    </svg>
+  )
 }
 
 function hasCoordinates(
@@ -434,39 +498,29 @@ async function handlePhotoChange(file: File | null) {
               ))}
             </select>
 
-            <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">
-                    {availableCoordinates ? 'Location ready' : 'Location needed'}
-                  </p>
-                  <p className="text-xs text-zinc-400 mt-1">
-                    {photoCoordinates && 'Using photo GPS'}
-                    {!photoCoordinates && currentCoordinates && 'Using phone location'}
-                    {!photoCoordinates && !currentCoordinates && selectedPlaceCoordinates && 'Using selected place'}
-                    {!availableCoordinates && locationStatus === 'checking' && 'Checking phone location...'}
-                    {!availableCoordinates && locationStatus !== 'checking' && 'Allow location or choose a planned place'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={captureCurrentLocation}
-                  disabled={locationStatus === 'checking'}
-                  className="shrink-0 rounded-xl border border-zinc-700 px-3 py-2 text-sm font-semibold text-yellow-400 disabled:opacity-50"
-                >
-                  {locationStatus === 'checking' ? 'Checking' : 'Use GPS'}
-                </button>
-              </div>
-            </div>
-
             <label className="block text-sm text-zinc-400 mb-2">Photo</label>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
-              className="w-full mb-4 text-sm"
-            />
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <label className="rounded-2xl border border-zinc-700 bg-zinc-900 px-3 py-4 text-center text-sm font-semibold text-yellow-400">
+                Take Photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
+                  className="sr-only"
+                />
+              </label>
+
+              <label className="rounded-2xl border border-zinc-700 bg-zinc-900 px-3 py-4 text-center text-sm font-semibold text-yellow-400">
+                Choose Library
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
+                  className="sr-only"
+                />
+              </label>
+            </div>
 
             {photoPreview && (
               <div className="mb-4">
@@ -497,6 +551,31 @@ async function handlePhotoChange(file: File | null) {
               placeholder="What did we find?"
               className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
             />
+
+            <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">
+                    {availableCoordinates ? 'Location ready' : 'Location needed'}
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    {photoCoordinates && 'Using photo GPS'}
+                    {!photoCoordinates && currentCoordinates && 'Using phone location'}
+                    {!photoCoordinates && !currentCoordinates && selectedPlaceCoordinates && 'Using selected place'}
+                    {!availableCoordinates && locationStatus === 'checking' && 'Checking phone location...'}
+                    {!availableCoordinates && locationStatus !== 'checking' && 'Allow location or choose a planned place'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={captureCurrentLocation}
+                  disabled={locationStatus === 'checking'}
+                  className="shrink-0 rounded-xl border border-zinc-700 px-3 py-2 text-sm font-semibold text-yellow-400 disabled:opacity-50"
+                >
+                  {locationStatus === 'checking' ? 'Checking' : 'Use GPS'}
+                </button>
+              </div>
+            </div>
 
             <button
               type="submit"
@@ -567,52 +646,52 @@ async function handlePhotoChange(file: File | null) {
   // ---- Nav ----
 
   function renderBottomNav() {
+    const navItems: Array<{
+      id: 'home' | 'quests' | 'map' | 'journal'
+      label: string
+      icon: IconName
+    }> = [
+      { id: 'home', label: 'Home', icon: 'home' },
+      { id: 'quests', label: 'Quests', icon: 'quests' },
+      { id: 'map', label: 'Map', icon: 'map' },
+      { id: 'journal', label: 'Journal', icon: 'journal' }
+    ]
+
     return (
-      <nav className="fixed bottom-0 left-0 right-0 z-[9997] bg-zinc-950/95 backdrop-blur border-t border-zinc-800">
+      <nav className="fixed bottom-0 left-0 right-0 z-[9997] bg-zinc-950 text-white shadow-[0_-12px_30px_rgba(0,0,0,0.28)]">
         <div className="max-w-md mx-auto grid grid-cols-5 items-center px-4 py-3">
-          <button
-            type="button"
-            onClick={() => setActiveView('home')}
-            className={activeView === 'home' ? 'text-yellow-400' : 'text-zinc-400'}
-          >
-            <div className="text-2xl">🏠</div>
-            <div className="text-xs">Home</div>
-          </button>
+          {navItems.slice(0, 2).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveView(item.id)}
+              className={`flex flex-col items-center gap-1 ${activeView === item.id ? 'text-yellow-300' : 'text-zinc-400'}`}
+            >
+              <FlatIcon name={item.icon} className="h-7 w-7" />
+              <span className="text-xs font-semibold">{item.label}</span>
+            </button>
+          ))}
 
           <button
             type="button"
-            onClick={() => setActiveView('quests')}
-            className={activeView === 'quests' ? 'text-yellow-400' : 'text-zinc-400'}
-          >
-            <div className="text-2xl">📋</div>
-            <div className="text-xs">Quests</div>
-          </button>
-
-          <button
-            type="button"
+            aria-label="Capture"
             onClick={openCaptureForm}
-            className="relative -mt-10 mx-auto bg-yellow-400 text-black w-20 h-20 rounded-full border-4 border-zinc-950 shadow-2xl flex items-center justify-center text-3xl"
+            className="relative -mt-10 mx-auto bg-yellow-400 text-black w-20 h-20 rounded-full border-4 border-white shadow-2xl flex items-center justify-center"
           >
-            📸
+            <FlatIcon name="camera" className="h-10 w-10" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveView('map')}
-            className={activeView === 'map' ? 'text-yellow-400' : 'text-zinc-400'}
-          >
-            <div className="text-2xl">📍</div>
-            <div className="text-xs">Map</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveView('journal')}
-            className={activeView === 'journal' ? 'text-yellow-400' : 'text-zinc-400'}
-          >
-            <div className="text-2xl">📖</div>
-            <div className="text-xs">Journal</div>
-          </button>
+          {navItems.slice(2).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setActiveView(item.id)}
+              className={`flex flex-col items-center gap-1 ${activeView === item.id ? 'text-yellow-300' : 'text-zinc-400'}`}
+            >
+              <FlatIcon name={item.icon} className="h-7 w-7" />
+              <span className="text-xs font-semibold">{item.label}</span>
+            </button>
+          ))}
         </div>
       </nav>
     )
@@ -623,55 +702,149 @@ async function handlePhotoChange(file: File | null) {
   const totalPoints = discoveries.reduce((sum, item) => sum + item.points, 0)
   const visitedPlaceIds = new Set(discoveries.map((d) => d.place_id).filter(Boolean))
   const visitedPlacesCount = visitedPlaceIds.size
+  const momentProgress = Math.min(discoveries.length / TEAM_MOMENT_GOAL, 1)
+  const momentProgressPercent = Math.round(momentProgress * 100)
+  const momentsRemaining = Math.max(TEAM_MOMENT_GOAL - discoveries.length, 0)
+  const nextTier = totalPoints >= 500
+    ? 'Navigator'
+    : totalPoints >= 250
+      ? 'Adventurer'
+      : totalPoints >= 100
+        ? 'Explorer'
+        : 'Rookie'
+  const actionCards: Array<{
+    label: string
+    helper: string
+    icon: IconName
+    color: string
+    onClick: () => void
+  }> = [
+    {
+      label: 'Capture',
+      helper: 'Add a moment',
+      icon: 'camera',
+      color: 'bg-blue-700 text-white',
+      onClick: openCaptureForm
+    },
+    {
+      label: 'Quests',
+      helper: 'View stops',
+      icon: 'quests',
+      color: 'bg-white text-blue-700',
+      onClick: () => setActiveView('quests')
+    },
+    {
+      label: 'Map',
+      helper: 'See progress',
+      icon: 'map',
+      color: 'bg-white text-green-700',
+      onClick: () => setActiveView('map')
+    },
+    {
+      label: 'Journal',
+      helper: 'Our story',
+      icon: 'journal',
+      color: 'bg-white text-purple-700',
+      onClick: () => setActiveView('journal')
+    }
+  ]
 
   // ---- Render ----
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white p-6">
+    <main className="min-h-screen bg-[#f7f3ea] text-zinc-950 p-5">
       <div className="max-w-md mx-auto pb-32">
 
-        <div className="mb-8">
-          <p className="text-yellow-400 uppercase tracking-widest text-sm">NYC Weekend Adventure</p>
-          <h1 className="text-4xl font-bold mt-2">Lu in NYC 2026</h1>
+        <header className="mb-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-16 w-16 rounded-full bg-blue-700 text-white flex items-center justify-center text-xl font-black tracking-tight">
+                NYC
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase text-blue-700">Weekend Quest</p>
+                <h1 className="text-3xl font-black leading-none">Lu in NYC 2026</h1>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-4 gap-2 mt-5">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-              <p className="text-2xl font-bold">{discoveries.length}</p>
-              <p className="text-xs text-zinc-400">Moments</p>
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-              <p className="text-2xl font-bold">{totalPoints}</p>
-              <p className="text-xs text-zinc-400">Points</p>
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-              <p className="text-2xl font-bold">{visitedPlacesCount}</p>
-              <p className="text-xs text-zinc-400">Places</p>
-            </div>
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-3 text-center">
-              <p className="text-2xl font-bold">{places.length}</p>
-              <p className="text-xs text-zinc-400">Stops</p>
+            <div className="text-center">
+              <div className="relative mx-auto h-14 w-14 rounded-full bg-white border border-zinc-200 shadow flex items-center justify-center text-zinc-950">
+                <FlatIcon name="group" className="h-8 w-8" />
+                <span className="absolute -right-1 -top-1 h-6 min-w-6 rounded-full bg-blue-700 px-1 text-sm font-black text-white">
+                  {TEAM_SIZE}
+                </span>
+              </div>
+              <p className="mt-1 text-xs font-semibold text-zinc-500">Our Group</p>
             </div>
           </div>
-        </div>
+        </header>
+
+        <section className="mb-6 rounded-[28px] bg-zinc-950 p-5 text-white shadow-xl">
+          <div className="grid grid-cols-2 gap-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-zinc-300">Moments</p>
+              <p className="mt-1 text-5xl font-black leading-none">
+                {discoveries.length}
+                <span className="text-3xl text-zinc-300"> / {TEAM_MOMENT_GOAL}</span>
+              </p>
+              <p className="mt-2 text-sm font-bold text-white">Captured together</p>
+            </div>
+
+            <div className="border-l border-white/15 pl-5">
+              <p className="text-xs font-black uppercase tracking-wider text-zinc-300">Team Points</p>
+              <p className="mt-1 text-5xl font-black leading-none text-yellow-400">{totalPoints}</p>
+              <p className="mt-2 text-sm font-bold text-white">{nextTier} tier</p>
+            </div>
+          </div>
+
+          <div className="mt-5 h-4 overflow-hidden rounded-full bg-white/15">
+            <div
+              className="h-full rounded-full bg-yellow-400"
+              style={{ width: `${momentProgressPercent}%` }}
+            />
+          </div>
+          <p className="mt-3 text-sm text-zinc-300">
+            {momentProgressPercent}% complete · {momentsRemaining} moments left · {visitedPlacesCount} places visited
+          </p>
+        </section>
+
+        {activeView === 'home' && (
+          <section className="mb-6 grid grid-cols-4 gap-3">
+            {actionCards.map((card) => (
+              <button
+                key={card.label}
+                type="button"
+                onClick={card.onClick}
+                className={`min-h-32 rounded-2xl p-3 text-center shadow ${card.color}`}
+              >
+                <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-current/10">
+                  <FlatIcon name={card.icon} className="h-8 w-8" />
+                </span>
+                <span className="block text-sm font-black uppercase leading-tight">{card.label}</span>
+                <span className="mt-2 block text-xs font-medium opacity-75">{card.helper}</span>
+              </button>
+            ))}
+          </section>
+        )}
 
         {activeView === 'home' && (
           <>
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4">Adventure Map</h2>
+              <h2 className="text-2xl font-black mb-4">Adventure Map</h2>
               <DiscoveryMap discoveries={discoveries} />
             </section>
 
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4">Recent Moments</h2>
+              <h2 className="text-2xl font-black mb-4">Recent Moments</h2>
 
               {discoveries.length === 0 ? (
-                <p className="text-zinc-400">No moments yet. Capture the first one!</p>
+                <p className="text-zinc-500">No moments yet. Capture the first one!</p>
               ) : (
                 <div className="space-y-5">
                   {discoveries.map((discovery) => (
                     <div
                       key={discovery.id}
-                      className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden"
+                      className="bg-white border border-zinc-100 rounded-3xl overflow-hidden shadow"
                     >
                       <img
                         src={discovery.photo_url}
@@ -680,13 +853,13 @@ async function handlePhotoChange(file: File | null) {
                       />
                       <div className="p-4">
                         <p className="font-semibold">{discovery.caption || 'NYC moment'}</p>
-                        <p className="text-sm text-zinc-400 mt-1">
+                        <p className="text-sm text-zinc-500 mt-1">
                           {getMemberName(discovery.members)} · {discovery.points} pts · {formatTimestamp(discovery.created_at)}
                         </p>
                         <button
                           type="button"
                           onClick={() => openEditDiscovery(discovery)}
-                          className="mt-3 text-sm text-yellow-400 font-semibold"
+                          className="mt-3 text-sm text-blue-700 font-black"
                         >
                           Edit
                         </button>
@@ -698,7 +871,7 @@ async function handlePhotoChange(file: File | null) {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold mb-4">Planned Places</h2>
+              <h2 className="text-2xl font-black mb-4">Planned Places</h2>
 
               {loading ? (
                 <p>Loading...</p>
@@ -707,14 +880,14 @@ async function handlePhotoChange(file: File | null) {
                   {places.map((place) => (
                     <div
                       key={place.id}
-                      className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4"
+                      className="bg-white border border-zinc-100 rounded-2xl p-4 shadow-sm"
                     >
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="text-lg font-semibold">{place.name}</p>
-                          <p className="text-zinc-400 text-sm">{place.category}</p>
+                          <p className="text-zinc-500 text-sm">{place.category}</p>
                         </div>
-                        <div className="bg-yellow-400 text-black px-3 py-1 rounded-full font-bold text-sm">
+                        <div className="bg-yellow-400 text-black px-3 py-1 rounded-full font-black text-sm">
                           {place.points} pts
                         </div>
                       </div>
@@ -729,7 +902,7 @@ async function handlePhotoChange(file: File | null) {
 {/* -----  Quests view  ---- */}
 {activeView === 'quests' && (
   <section className="pb-24">
-    <h2 className="text-3xl font-bold mb-6">
+    <h2 className="text-3xl font-black mb-6">
       Quest List
     </h2>
 
@@ -737,7 +910,7 @@ async function handlePhotoChange(file: File | null) {
       {places.map((place) => (
         <div
           key={place.id}
-          className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4"
+          className="bg-white border border-zinc-100 rounded-2xl p-4 shadow-sm"
         >
           <div className="flex justify-between items-center">
             <div>
@@ -745,12 +918,12 @@ async function handlePhotoChange(file: File | null) {
                 {place.name}
               </p>
 
-              <p className="text-zinc-400 text-sm">
+              <p className="text-zinc-500 text-sm">
                 {place.category}
               </p>
             </div>
 
-            <div className="bg-yellow-400 text-black px-3 py-1 rounded-full font-bold text-sm">
+            <div className="bg-yellow-400 text-black px-3 py-1 rounded-full font-black text-sm">
               {place.points} pts
             </div>
           </div>
@@ -763,7 +936,7 @@ async function handlePhotoChange(file: File | null) {
 {/* ------  Map view --------- */}
 {activeView === 'map' && (
   <section className="pb-24">
-    <h2 className="text-3xl font-bold mb-6">
+    <h2 className="text-3xl font-black mb-6">
       Adventure Map
     </h2>
 
@@ -774,7 +947,7 @@ async function handlePhotoChange(file: File | null) {
 {/* ----  Journal view  ------- */}
 {activeView === 'journal' && (
   <section className="pb-24">
-    <h2 className="text-3xl font-bold mb-6">
+    <h2 className="text-3xl font-black mb-6">
       Journal Timeline
     </h2>
 
@@ -782,7 +955,7 @@ async function handlePhotoChange(file: File | null) {
       {discoveries.map((discovery) => (
         <div
           key={discovery.id}
-          className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden"
+          className="bg-white border border-zinc-100 rounded-3xl overflow-hidden shadow"
         >
           <img
             src={discovery.photo_url}
@@ -795,14 +968,14 @@ async function handlePhotoChange(file: File | null) {
               {discovery.caption || 'NYC moment'}
             </p>
 
-            <p className="text-sm text-zinc-400 mt-1">
+            <p className="text-sm text-zinc-500 mt-1">
               {getMemberName(discovery.members)} · {discovery.points} pts · {formatTimestamp(discovery.created_at)}
             </p>
 
             <button
               type="button"
               onClick={() => openEditDiscovery(discovery)}
-              className="mt-3 text-sm text-yellow-400 font-semibold"
+              className="mt-3 text-sm text-blue-700 font-black"
             >
               Edit
             </button>
