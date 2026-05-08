@@ -16,6 +16,8 @@ type Place = {
   name: string
   category: string
   points: number
+  latitude: number | null
+  longitude: number | null
 }
 
 type Discovery = {
@@ -129,7 +131,7 @@ export default function HomePage() {
         longitude = position.coords.longitude
       }
     } catch {
-      console.log('Location permission skipped or unavailable.')
+      console.log('Location permission skipped or unavailable. Using selected place if available.')
     }
 
     const fileExt = photo.name.split('.').pop()
@@ -182,6 +184,11 @@ export default function HomePage() {
 
     const selectedPlace = places.find((place) => place.id === selectedPlaceId)
     const pointsToAward = selectedPlace ? selectedPlace.points : 5
+
+    if ((!latitude || !longitude) && selectedPlace?.latitude && selectedPlace?.longitude) {
+      latitude = selectedPlace.latitude
+      longitude = selectedPlace.longitude
+}
 
     const { error: insertError } = await supabase.from('discoveries').insert({
       trip_id: TRIP_ID,
@@ -263,7 +270,7 @@ export default function HomePage() {
   function CaptureModal() {
     return (
       <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-end justify-center">
-        <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6">
+        <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-2xl font-bold">📸 Capture Moment</h2>
             <button
@@ -315,7 +322,7 @@ export default function HomePage() {
                 <img
                   src={photoPreview}
                   alt="Preview"
-                  className="w-full aspect-square object-cover rounded-2xl border border-zinc-800"
+                  className="w-full max-h-64 object-cover rounded-2xl border border-zinc-800"
                 />
                 <button
                   type="button"
