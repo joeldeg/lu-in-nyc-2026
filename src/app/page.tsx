@@ -43,8 +43,9 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
 
   const [photo, setPhoto] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [caption, setCaption] = useState('')
-  const [memberId, setMemberId] = useState('')
+  const [memberName, setMemberName] = useState('')
   const [saving, setSaving] = useState(false)
   const [showCaptureForm, setShowCaptureForm] = useState(false)
 
@@ -65,17 +66,33 @@ export default function HomePage() {
     if (placesResponse.data) setPlaces(placesResponse.data)
     if (membersResponse.data) {
       setMembers(membersResponse.data)
-      setMemberId(membersResponse.data[0]?.id ?? '')
+      const savedMemberName = localStorage.getItem('nyc-member-name')
+
+if (savedMemberName) {
+  setMemberName(savedMemberName)
+}
     }
     if (discoveriesResponse.data) setDiscoveries(discoveriesResponse.data as Discovery[])
 
     setLoading(false)
   }
 
+  function handlePhotoChange(file: File | null) {
+  setPhoto(file)
+
+  if (!file) {
+    setPhotoPreview(null)
+    return
+  }
+
+  const previewUrl = URL.createObjectURL(file)
+  setPhotoPreview(previewUrl)
+ }
+
   async function handleCaptureMoment(event: React.FormEvent) {
     event.preventDefault()
 
-    if (!photo || !memberId) {
+    if (!photo || !memberName.trim()) {
       alert('Choose a photo and a person first.')
       return
     }
@@ -119,6 +136,35 @@ export default function HomePage() {
       .from('trip-photos')
       .getPublicUrl(fileName)
 
+let memberId: string | null = null
+
+const { data: existingMember } = await supabase
+  .from('members')
+  .select('*')
+  .ilike('name', memberName.trim())
+  .single()
+
+if (existingMember) {
+  memberId = existingMember.id
+} else {
+  const { data: newMember, error: memberError } = await supabase
+    .from('members')
+    .insert({
+      trip_id: TRIP_ID,
+      name: memberName.trim()
+    })
+    .select()
+    .single()
+
+  if (memberError || !newMember) {
+    alert('Could not create member.')
+    setSaving(false)
+    return
+  }
+
+  memberId = newMember.id
+}
+
     const { error: insertError } = await supabase
       .from('discoveries')
       .insert({
@@ -139,6 +185,7 @@ export default function HomePage() {
     }
 
     setPhoto(null)
+    setPhotoPreview(null)
     setCaption('')
     setShowCaptureForm(false)
     await fetchData()
@@ -184,20 +231,18 @@ export default function HomePage() {
 
       <form onSubmit={handleCaptureMoment}>
         <label className="block text-sm text-zinc-400 mb-2">
-          Who is adding this?
-        </label>
+  Your name
+</label>
 
-        <select
-          value={memberId}
-          onChange={(e) => setMemberId(e.target.value)}
-          className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
-        >
-          {members.map((member) => (
-            <option key={member.id} value={member.id}>
-              {member.name}
-            </option>
-          ))}
-        </select>
+<input
+  value={memberName}
+  onChange={(e) => {
+    setMemberName(e.target.value)
+    localStorage.setItem('nyc-member-name', e.target.value)
+  }}
+  placeholder="Enter your name"
+  className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+/>
 
         <label className="block text-sm text-zinc-400 mb-2">
           Photo
@@ -207,9 +252,30 @@ export default function HomePage() {
           type="file"
           accept="image/*"
           capture="environment"
-          onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+          onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
           className="w-full mb-4 text-sm"
         />
+
+{photoPreview && (
+  <div className="mb-4">
+    <img
+      src={photoPreview}
+      alt="Preview"
+      className="w-full aspect-square object-cover rounded-2xl border border-zinc-800"
+    />
+
+    <button
+      type="button"
+      onClick={() => {
+        setPhoto(null)
+        setPhotoPreview(null)
+      }}
+      className="mt-2 text-sm text-zinc-400 underline"
+    >
+      Remove photo
+    </button>
+  </div>
+)}
 
         <label className="block text-sm text-zinc-400 mb-2">
           Caption
