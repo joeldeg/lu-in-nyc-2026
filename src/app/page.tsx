@@ -46,6 +46,7 @@ export default function HomePage() {
   const [caption, setCaption] = useState('')
   const [memberId, setMemberId] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showCaptureForm, setShowCaptureForm] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -71,7 +72,7 @@ export default function HomePage() {
     setLoading(false)
   }
 
-  async function handleCheeseIt(event: React.FormEvent) {
+  async function handleCaptureMoment(event: React.FormEvent) {
     event.preventDefault()
 
     if (!photo || !memberId) {
@@ -139,9 +140,10 @@ export default function HomePage() {
 
     setPhoto(null)
     setCaption('')
+    setShowCaptureForm(false)
     await fetchData()
     setSaving(false)
-  }
+      }
 
   const totalPoints = discoveries.reduce((sum, item) => sum + item.points, 0)
 
@@ -163,61 +165,74 @@ export default function HomePage() {
           </p>
         </div>
 
-        <form
-          onSubmit={handleCheeseIt}
-          className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 mb-8"
+        {showCaptureForm && (
+  <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-end justify-center">
+    <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-2xl font-bold">
+          📸 Capture Moment
+        </h2>
+
+        <button
+          type="button"
+          onClick={() => setShowCaptureForm(false)}
+          className="text-zinc-400 text-2xl"
         >
-          <h2 className="text-2xl font-bold mb-4">
-            📸 Cheese It
-          </h2>
+          ×
+        </button>
+      </div>
 
-          <label className="block text-sm text-zinc-400 mb-2">
-            Who is adding this?
-          </label>
+      <form onSubmit={handleCaptureMoment}>
+        <label className="block text-sm text-zinc-400 mb-2">
+          Who is adding this?
+        </label>
 
-          <select
-            value={memberId}
-            onChange={(e) => setMemberId(e.target.value)}
-            className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
-          >
-            {members.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}
-              </option>
-            ))}
-          </select>
+        <select
+          value={memberId}
+          onChange={(e) => setMemberId(e.target.value)}
+          className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+        >
+          {members.map((member) => (
+            <option key={member.id} value={member.id}>
+              {member.name}
+            </option>
+          ))}
+        </select>
 
-          <label className="block text-sm text-zinc-400 mb-2">
-            Photo
-          </label>
+        <label className="block text-sm text-zinc-400 mb-2">
+          Photo
+        </label>
 
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
-            className="w-full mb-4 text-sm"
-          />
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+          className="w-full mb-4 text-sm"
+        />
 
-          <label className="block text-sm text-zinc-400 mb-2">
-            Caption
-          </label>
+        <label className="block text-sm text-zinc-400 mb-2">
+          Caption
+        </label>
 
-          <input
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            placeholder="What did we find?"
-            className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
-          />
+        <input
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          placeholder="What did we find?"
+          className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+        />
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full bg-yellow-400 text-black font-bold py-4 rounded-2xl text-lg disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Moment'}
-          </button>
-        </form>
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full bg-yellow-400 text-black font-bold py-4 rounded-2xl text-lg disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Moment'}
+        </button>
+      </form>
+    </div>
+  </div>
+)}
 
 <section className="mb-8">
   <h2 className="text-2xl font-semibold mb-4">
@@ -300,6 +315,13 @@ export default function HomePage() {
         </section>
 
       </div>
+      <button
+  type="button"
+  onClick={() => setShowCaptureForm(true)}
+  className="fixed bottom-6 right-6 z-[9998] bg-yellow-400 text-black font-bold px-5 py-4 rounded-full shadow-2xl hover:scale-105 transition"
+>
+  📸 Capture Moment
+</button>
     </main>
   )
 }
