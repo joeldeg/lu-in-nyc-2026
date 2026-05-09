@@ -42,6 +42,40 @@ type Discovery = {
 
 type IconName = 'home' | 'quests' | 'camera' | 'map' | 'journal' | 'group'
 
+const CATEGORY_STYLES: Record<string, { accent: string; badge: string }> = {
+  Transit: {
+    accent: 'border-blue-600',
+    badge: 'bg-blue-100 text-blue-800'
+  },
+  Food: {
+    accent: 'border-orange-500',
+    badge: 'bg-orange-100 text-orange-800'
+  },
+  'Street Life': {
+    accent: 'border-green-600',
+    badge: 'bg-green-100 text-green-800'
+  },
+  'NYC Icons': {
+    accent: 'border-yellow-500',
+    badge: 'bg-yellow-100 text-yellow-900'
+  },
+  Shopping: {
+    accent: 'border-purple-600',
+    badge: 'bg-purple-100 text-purple-800'
+  },
+  'Team Bonus': {
+    accent: 'border-pink-600',
+    badge: 'bg-pink-100 text-pink-800'
+  }
+}
+
+function getCategoryStyle(category: string) {
+  return CATEGORY_STYLES[category] ?? {
+    accent: 'border-zinc-400',
+    badge: 'bg-zinc-100 text-zinc-700'
+  }
+}
+
 function FlatIcon({
   name,
   className = 'h-7 w-7'
@@ -462,7 +496,7 @@ async function handlePhotoChange(file: File | null) {
       <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-end justify-center">
         <div className="w-full max-w-md bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-2xl font-bold">📸 Capture Moment</h2>
+            <h2 className="text-2xl font-bold text-white">Capture Moment</h2>
             <button
               type="button"
               onClick={() => setShowCaptureForm(false)}
@@ -712,6 +746,19 @@ async function handlePhotoChange(file: File | null) {
       : totalPoints >= 100
         ? 'Explorer'
         : 'Rookie'
+  const questCategories = Array.from(
+    places.reduce((groups, place) => {
+      const category = place.category || 'Other'
+      const categoryPlaces = groups.get(category) ?? []
+      categoryPlaces.push(place)
+      groups.set(category, categoryPlaces)
+      return groups
+    }, new Map<string, Place[]>())
+  ).map(([category, categoryPlaces]) => ({
+    category,
+    places: categoryPlaces
+  }))
+
   const actionCards: Array<{
     label: string
     helper: string
@@ -902,34 +949,61 @@ async function handlePhotoChange(file: File | null) {
 {/* -----  Quests view  ---- */}
 {activeView === 'quests' && (
   <section className="pb-24">
-    <h2 className="text-3xl font-black mb-6">
-      Quest List
-    </h2>
-
-    <div className="space-y-4">
-      {places.map((place) => (
-        <div
-          key={place.id}
-          className="bg-white border border-zinc-100 rounded-2xl p-4 shadow-sm"
-        >
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-lg font-semibold">
-                {place.name}
-              </p>
-
-              <p className="text-zinc-500 text-sm">
-                {place.category}
-              </p>
-            </div>
-
-            <div className="bg-yellow-400 text-black px-3 py-1 rounded-full font-black text-sm">
-              {place.points} pts
-            </div>
-          </div>
-        </div>
-      ))}
+    <div className="mb-6">
+      <p className="text-xs font-black uppercase text-blue-700">Browse by category</p>
+      <h2 className="text-3xl font-black">Quest List</h2>
+      <p className="mt-1 text-sm font-semibold text-zinc-500">
+        {places.length} quests across {questCategories.length} categories
+      </p>
     </div>
+
+    {loading ? (
+      <p>Loading...</p>
+    ) : (
+      <div className="space-y-6">
+        {questCategories.map(({ category, places: categoryPlaces }) => {
+          const style = getCategoryStyle(category)
+
+          return (
+            <section key={category}>
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-black">{category}</h3>
+                  <p className="text-sm font-semibold text-zinc-500">
+                    {categoryPlaces.length} quests
+                  </p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-black ${style.badge}`}>
+                  {categoryPlaces.reduce((sum, place) => sum + place.points, 0)} pts
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {categoryPlaces.map((place) => (
+                  <div
+                    key={place.id}
+                    className={`bg-white border border-zinc-100 border-l-4 ${style.accent} rounded-2xl p-4 shadow-sm`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-base font-black">{place.name}</p>
+                        <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                          {place.latitude && place.longitude ? 'Planned stop' : 'Scavenger find'}
+                        </p>
+                      </div>
+
+                      <div className="shrink-0 rounded-full bg-yellow-400 px-3 py-1 text-sm font-black text-black">
+                        {place.points} pts
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )
+        })}
+      </div>
+    )}
   </section>
 )}
 

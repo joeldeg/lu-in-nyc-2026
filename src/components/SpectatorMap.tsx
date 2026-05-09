@@ -11,6 +11,7 @@ export type SpectatorDiscovery = {
   latitude: number | null
   longitude: number | null
   points: number
+  place_id: string | null
   members:
   | {
       name: string
