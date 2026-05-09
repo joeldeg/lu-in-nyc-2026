@@ -125,7 +125,7 @@ useEffect(() => {
               <p className="text-xs font-black uppercase text-blue-700">Live Spectator View</p>
               <h1 className="text-3xl font-black leading-none">Lu in NYC 2026</h1>
               <p className="mt-1 text-sm font-semibold text-zinc-500">
-                Follow the team&apos;s day trip memories as they happen.
+                Follow the team&apos;s day trip memories as they happen. The page will tell you when something is added.
               </p>
             </div>
           </div>

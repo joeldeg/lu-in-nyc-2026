@@ -481,14 +481,14 @@ async function handlePhotoChange(file: File | null) {
                 localStorage.setItem('nyc-member-name', e.target.value)
               }}
               placeholder="Enter your name"
-              className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+              className="w-full mb-4 rounded-xl bg-white border border-zinc-300 p-3 text-zinc-950 placeholder:text-zinc-500"
             />
 
             <label className="block text-sm text-zinc-400 mb-2">Where are we?</label>
             <select
               value={selectedPlaceId}
               onChange={(e) => setSelectedPlaceId(e.target.value)}
-              className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+              className="w-full mb-4 rounded-xl bg-white border border-zinc-300 p-3 text-zinc-950"
             >
               <option value="">Just a moment</option>
               {places.map((place) => (
@@ -549,7 +549,7 @@ async function handlePhotoChange(file: File | null) {
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="What did we find?"
-              className="w-full mb-4 rounded-xl bg-zinc-800 border border-zinc-700 p-3"
+              className="w-full mb-4 rounded-xl bg-white border border-zinc-300 p-3 text-zinc-950 placeholder:text-zinc-500"
             />
 
             <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-3">
