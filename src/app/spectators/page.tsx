@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import dynamic from 'next/dynamic'
 import type { SpectatorDiscovery } from '@/components/SpectatorMap'
@@ -42,7 +42,8 @@ export default function SpectatorsPage() {
   )
   const progressPercent = Math.min(Math.round((discoveries.length / TEAM_MOMENT_GOAL) * 100), 100)
 
-  const fetchDiscoveries = useCallback(async () => {
+useEffect(() => {
+  async function loadDiscoveries() {
     const { data, error } = await supabase
       .from('discoveries')
       .select('id, photo_url, caption, latitude, longitude, points, created_at, members(name)')
@@ -57,11 +58,11 @@ export default function SpectatorsPage() {
 
     setDiscoveries((data ?? []) as SpectatorDiscovery[])
     setLoading(false)
+  }
+
+  void loadDiscoveries()
   }, [])
 
-  useEffect(() => {
-    void fetchDiscoveries()
-  }, [fetchDiscoveries])
 
   useEffect(() => {
     const channel = supabase
@@ -85,7 +86,6 @@ export default function SpectatorsPage() {
             .single()
 
           if (error || !data) {
-            await fetchDiscoveries()
             return
           }
 
@@ -104,7 +104,7 @@ export default function SpectatorsPage() {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [fetchDiscoveries])
+  }, [])
 
   function focusLatestMoment() {
     if (!latestNewMoment) return
